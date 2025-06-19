@@ -1,8 +1,9 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import json
+import subprocess
+
 GITHUB_SECRET = os.environ.get("GITHUB_SECRET")
-#second try
 
 class GitHubWebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -30,6 +31,14 @@ class GitHubWebhookHandler(BaseHTTPRequestHandler):
             print("Received webhook for:", data.get("repository", {}).get("full_name", "unknown repo"))
         except json.JSONDecodeError:
             self.send_error(400, "Invalid JSON")
+            return
+        
+        try:
+            subprocess.Popen(["cd-script.sh"])
+            print("Triggered deployment script.")
+        except Exception as e:
+            print("Error starting deployment script:", e)
+            self.send_error(500, "Failed to start deployment")
             return
         
         #Respond is OK - 200
