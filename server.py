@@ -2,13 +2,22 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 import json
 import subprocess
+import hmac, hashlib
 
 GITHUB_SECRET = os.environ.get("GITHUB_SECRET")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+
+
 
 class GitHubWebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get('Content-Length'))
         payload = self.rfile.read(length)
+
+        if not GITHUB_TOKEN:
+            print("GITHUB_TOKEN not found in .env")
+            self.send_error(500, "Server misconfigured: GITHUB_TOKEN missing")
+            return
 
         if GITHUB_SECRET:
             signature = self.headers.get('X-Hub-Signature-256')
@@ -34,7 +43,11 @@ class GitHubWebhookHandler(BaseHTTPRequestHandler):
             return
         
         try:
-            subprocess.Popen(["cd-script.sh"])
+            script_path = os.path.expanduser("~/CD-for-blog/deploy.sh")
+            subprocess.Popen(
+                ["bash",  script_path],
+                env={"GITHUB_TOKEN": GITHUB_TOKEN}
+            )
             print("Triggered deployment script.")
         except Exception as e:
             print("Error starting deployment script:", e)
